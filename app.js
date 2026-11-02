@@ -72,6 +72,33 @@
     dsel.value=S.dept;
     if(dsel.value!==S.dept){dsel.value='all';S.dept='all'}
   }
+  /* Turnover rate = separations in the year / average headcount * 100.
+     Average headcount = (headcount at start + headcount at end) / 2, worked back from the
+     current headcount in data.js using the hires and separations dated after each point. */
+  function turnover(){
+    var hc=S.meta&&S.meta.headcount, asOf=S.meta&&S.meta.asOf;
+    if(typeof hc!=='number'||!asOf)return {why:'HR needs to set headcount and date'};
+    if(S.year==='all')return {why:'Pick a year to see the rate'};
+    if(S.dept!=='all')return {why:'Shown for all departments only'};
+    var y=S.year,yEnd=y+'-12-31';
+    if(asOf<y+'-01-01')return {why:'Year is after the "as of" date'};
+    var endD=asOf<yEnd?asOf:yEnd;
+    function hcAt(d){
+      var h=hc;
+      S.movements.forEach(function(m){
+        if(m.date>d&&m.date<=asOf){var k=typeInfo(m.type).kind;if(k==='in')h--;else if(k==='out')h++}
+      });
+      return h;
+    }
+    var avg=(hcAt((y-1)+'-12-31')+hcAt(endD))/2;
+    if(avg<=0)return {why:'Headcount looks too low to compute'};
+    var seps=0,res=0;
+    S.movements.forEach(function(m){
+      if(yearOf(m)!==y||m.date>endD)return;
+      if(typeInfo(m.type).kind==='out'){seps++;if(m.type==='Resignation')res++}
+    });
+    return {rate:seps/avg*100,vol:res/avg*100,avg:avg,partial:endD<yEnd};
+  }
   function renderTiles(){
     var b=base(),h=0,s=0,i=0;
     b.forEach(function(m){var k=typeInfo(m.type).kind;if(k==='in')h++;else if(k==='out')s++;else i++});
@@ -83,6 +110,10 @@
       {k:'Transfers and promotions',v:i,n:'Internal movements',c:'var(--c-prom)'},
       {k:'Net change',v:netTxt,n:'Hires minus separations',c:'var(--accent)'}
     ];
+    var T=turnover();
+    if(T.why)t.push({k:'Turnover rate',v:'—',n:T.why,c:'var(--c-trans)'});
+    else t.push({k:'Turnover rate',v:T.rate.toFixed(1)+'%',
+      n:'Resignations only: '+T.vol.toFixed(1)+'% · avg headcount '+Math.round(T.avg)+(T.partial?' · year to date':''),c:'var(--c-trans)'});
     $('tiles').innerHTML=t.map(function(x){
       return '<div class="tile" style="--tc:'+x.c+'"><span class="k">'+esc(x.k)+'</span><span class="v">'+esc(x.v)+'</span><span class="n">'+esc(x.n)+'</span></div>';
     }).join('');
