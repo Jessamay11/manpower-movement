@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manpower Movement Editor (HR only)</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="style.css">
+<style>
+  .ed table{width:100%;border-collapse:collapse;font-size:14px}
+  .ed th,.ed td{text-align:left;padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+  .ed th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll{overflow-x:auto}
+  ol.steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap ed">
+  <header>
+    <div>
+      <h1>HR editor</h1>
+      <p class="sub">Para sa HR lang. Huwag i-share ang page na ito sa mga empleyado.</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Paano mag-update</h2>
+    <ol class="steps">
+      <li>Mag-add o mag-delete ng movement sa ibaba, at i-edit ang headcount at announcement.</li>
+      <li>Pindutin ang <b>Download data.js</b>.</li>
+      <li>Palitan ang lumang <code>data.js</code> sa website folder ng bagong na-download, tapos i-upload ulit sa hosting.</li>
+    </ol>
+    <p class="msg" id="loadMsg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Headcount at announcement</h2>
+    <form class="form" id="metaForm" autocomplete="off" onsubmit="return false">
+      <label for="mHead">Current headcount<input type="number" id="mHead" min="0"></label>
+      <label for="mAsOf">As of<input type="date" id="mAsOf"></label>
+      <label class="wide" for="mAnn">Announcement (iwanang blangko para itago)<textarea id="mAnn" rows="3"></textarea></label>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Add a movement</h2>
+    <form class="form" id="addForm" autocomplete="off">
+      <label for="aDate">Effective date<input type="date" id="aDate" required></label>
+      <label for="aType">Movement<select id="aType"></select></label>
+      <label for="aName">Employee name<input type="text" id="aName" required></label>
+      <label for="aPos">Position<input type="text" id="aPos"></label>
+      <label for="aDept">Department<input type="text" id="aDept" list="deptList"></label>
+      <label for="aDet">Details<input type="text" id="aDet" placeholder="e.g. From Finance to HR"></label>
+      <datalist id="deptList"></datalist>
+      <div class="wide actions"><button class="btn" type="submit">Add to list</button><span class="msg" id="addMsg"></span></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Current list <span class="count" id="n"></span></h2>
+    <div class="scroll"><table id="tbl"></table></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn" type="button" id="dl">Download data.js</button>
+    <button class="btn danger" type="button" id="clearSample">Clear all sample entries</button>
+    <span class="msg" id="dlMsg"></span>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  var TYPES=['Hire','Promotion','Transfer','Resignation','Retirement','End of Contract'];
+  var D=window.MANPOWER_DATA||{meta:{},movements:[]};
+  var meta=D.meta||{}, list=(D.movements||[]).slice();
+  var $=function(i){return document.getElementById(i)};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  $('aType').innerHTML=TYPES.map(function(t){return '<option>'+t+'</option>'}).join('');
+  $('mHead').value=typeof meta.headcount==='number'?meta.headcount:'';
+  $('mAsOf').value=meta.asOf||'';
+  $('mAnn').value=meta.announcement||'';
+  $('loadMsg').textContent='Na-load ang '+list.length+' movements mula sa data.js.';
+
+  function render(){
+    list.sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0});
+    $('n').textContent='('+list.length+')';
+    var depts={};list.forEach(function(m){if(m.department)depts[m.department]=1});
+    $('deptList').innerHTML=Object.keys(depts).sort().map(function(d){return '<option value="'+esc(d)+'">'}).join('');
+    $('tbl').innerHTML='<tr><th>Date</th><th>Movement</th><th>Employee</th><th>Department</th><th></th></tr>'+
+      list.map(function(m,i){
+        return '<tr><td>'+esc(m.date)+'</td><td>'+esc(m.type)+'</td><td>'+esc(m.name)+'</td><td>'+esc(m.department||'')+
+          '</td><td><button class="del" type="button" data-i="'+i+'">Delete</button></td></tr>';
+      }).join('');
+  }
+  $('tbl').addEventListener('click',function(e){
+    var b=e.target.closest('.del');if(!b)return;
+    var i=+b.getAttribute('data-i');
+    if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirm delete';b.classList.add('armed');return}
+    list.splice(i,1);render();
+  });
+  $('addForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var r={date:$('aDate').value,type:$('aType').value,name:$('aName').value.trim(),
+      position:$('aPos').value.trim(),department:$('aDept').value.trim(),detail:$('aDet').value.trim()};
+    if(!r.date||!r.name)return;
+    list.push(r);render();
+    ['aName','aPos','aDet'].forEach(function(id){$(id).value=''});
+    $('addMsg').textContent='Added. Huwag kalimutang i-download ang data.js.';
+  });
+  $('clearSample').addEventListener('click',function(){
+    if($('clearSample').dataset.armed!=='1'){$('clearSample').dataset.armed='1';$('clearSample').textContent='Confirm: clear the whole list';return}
+    list=[];meta.sample=false;meta.headcount=undefined;render();
+    $('clearSample').dataset.armed='';$('clearSample').textContent='Clear all sample entries';
+    $('dlMsg').textContent='Blangko na ang listahan. Mag-add ng totoong entries, tapos i-download ang data.js.';
+  });
+  $('dl').addEventListener('click',function(){
+    var hc=$('mHead').value;
+    var out={meta:{asOf:$('mAsOf').value||'',announcement:$('mAnn').value.trim(),sample:!!meta.sample},movements:list};
+    if(hc!=='')out.meta.headcount=+hc;
+    var text='/* Manpower movement data. Updated '+new Date().toISOString().slice(0,10)+' */\nwindow.MANPOWER_DATA = '+JSON.stringify(out,null,2)+';\n';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:'text/javascript'}));
+    a.download='data.js';document.body.appendChild(a);a.click();a.remove();
+    $('dlMsg').textContent='Na-download na ang data.js. Palitan ang lumang file sa website folder.';
+  });
+  render();
+})();
+</script>
+</body>
+</html>

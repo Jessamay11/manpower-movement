@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manpower Movement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Manpower Movement</h1>
+      <p class="sub">Hires, transfers, promotions and separations, as posted by HR.</p>
+    </div>
+    <div class="asof" id="asof"></div>
+  </header>
+
+  <div id="sampleBanner" class="banner sample" hidden>
+    <div class="lbl">Sample data</div>
+    <p>The entries below are examples only. HR will replace them with the actual movement list.</p>
+  </div>
+  <div id="announce" class="banner" hidden>
+    <div class="lbl">HR announcement</div>
+    <p id="announceText"></p>
+  </div>
+  <div id="status" class="status" role="status" aria-live="polite">Loading the latest movements…</div>
+
+  <section class="filters" aria-label="Filters">
+    <label for="fYear" class="count">Year</label>
+    <select id="fYear"></select>
+    <label for="fDept" class="count">Department</label>
+    <select id="fDept"></select>
+    <input type="text" id="fQ" class="grow" placeholder="Search name, position or details" aria-label="Search movements">
+  </section>
+
+  <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+  <section class="card" aria-labelledby="chartH">
+    <h2 id="chartH">Hires and separations by month</h2>
+    <p class="hint" id="chartHint"></p>
+    <div class="legend"><span><i style="background:var(--c-hire)"></i>Hires</span><span><i style="background:var(--c-res)"></i>Separations</span></div>
+    <div class="chart" id="chart"></div>
+    <div class="months" id="months"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <div class="chips" id="chips" role="group" aria-label="Filter by movement type"></div>
+    <div class="count" id="count"></div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <p class="foot">Separations count resignations, retirements and end of contract. Transfers and promotions do not change headcount. Updated by HR.</p>
+</div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
